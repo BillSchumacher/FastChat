@@ -29,10 +29,8 @@ def main(args):
     ]
     targets = [example['output'] for example in data]
 
-    new_data = []
-    cnt = 1
-    for s, t in zip(sources, targets):
-        new_data.append({
+    new_data = [
+        {
             'id': str(cnt),
             'conversations': [
                 {
@@ -42,11 +40,11 @@ def main(args):
                 {
                     'from': 'gpt',
                     'value': t,
-                }
-            ]
-        })
-        cnt += 1
-
+                },
+            ],
+        }
+        for cnt, (s, t) in enumerate(zip(sources, targets), start=1)
+    ]
     json.dump(new_data, open(args.output_path, 'w'), indent=2)
 
 if __name__ == '__main__':

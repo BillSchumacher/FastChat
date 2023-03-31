@@ -5,6 +5,7 @@ Usage:
 python3 -m fastchat.serve.register_worker --controller http://localhost:21001 --worker-name http://localhost:21002
 """
 
+
 import argparse
 
 import requests
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("--check-heart-beat", action="store_true")
     args = parser.parse_args()
 
-    url = args.controller_address + "/register_worker"
+    url = f"{args.controller_address}/register_worker"
     data = {
         "worker_name": args.worker_name,
         "check_heart_beat": args.check_heart_beat,

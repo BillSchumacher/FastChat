@@ -70,7 +70,7 @@ class Controller:
 
     def get_worker_status(self, worker_name: str):
         try:
-            r = requests.post(worker_name + "/worker_get_status", timeout=5)
+            r = requests.post(f"{worker_name}/worker_get_status", timeout=5)
         except requests.exceptions.RequestException as e:
             logger.error(f"Get status fails: {worker_name}, {e}")
             return None
@@ -113,31 +113,9 @@ class Controller:
             return ""
         worker_speeds = worker_speeds / norm
 
-        if True:  # Directly return address
-            pt = np.random.choice(np.arange(len(worker_names)),
-                p=worker_speeds)
-            worker_name = worker_names[pt]
-            #logger.info(f"speeds: {worker_speeds}, pt: {pt}, worker_name: {worker_name}")
-            return worker_name
-
-        # Check status before returning
-        while True:
-            pt = np.random.choice(np.arange(len(worker_names)),
-                p=worker_speeds)
-            worker_name = worker_names[pt]
-
-            if self.get_worker_status(worker_name):
-                break
-            else:
-                self.remove_worker(worker_name)
-                worker_speeds[pt] = 0
-                norm = np.sum(worker_speeds)
-                if norm < 1e-4:
-                    return ""
-                worker_speeds = worker_speeds / norm
-                continue
-
-        return worker_name
+        pt = np.random.choice(np.arange(len(worker_names)),
+            p=worker_speeds)
+        return worker_names[pt]
 
     def receive_heart_beat(self, worker_name: str):
         if worker_name not in self.worker_info:
@@ -150,11 +128,11 @@ class Controller:
 
     def remove_stable_workers_by_expiration(self):
         expire = time.time() - CONTROLLER_HEART_BEAT_EXPIRATION
-        to_delete = []
-        for worker_name, w_info in self.worker_info.items():
-            if w_info.check_heart_beat and w_info.last_heart_beat < expire:
-                to_delete.append(worker_name)
-
+        to_delete = [
+            worker_name
+            for worker_name, w_info in self.worker_info.items()
+            if w_info.check_heart_beat and w_info.last_heart_beat < expire
+        ]
         for worker_name in to_delete:
             self.remove_worker(worker_name)
 
@@ -169,8 +147,12 @@ class Controller:
             yield json.dumps(ret).encode() + b"\0"
 
         try:
-            response = requests.post(worker_addr + "/worker_generate_stream",
-                json=params, stream=True, timeout=5)
+            response = requests.post(
+                f"{worker_addr}/worker_generate_stream",
+                json=params,
+                stream=True,
+                timeout=5,
+            )
             for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\0"):
                 if chunk:
                     yield chunk + b"\0"

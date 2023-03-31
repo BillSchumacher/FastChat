@@ -35,9 +35,8 @@ def parse_score(review):
         sp = score_pair.split(' ')
         if len(sp) == 2:
             return [float(sp[0]), float(sp[1])]
-        else:
-            print('error', review)
-            return [-1, -1]
+        print('error', review)
+        return [-1, -1]
     except Exception as e:
         print(e)
         print('error', review)
@@ -61,45 +60,38 @@ if __name__ == '__main__':
     f_ans2 = open(os.path.expanduser(args.answer_list[1]))
     rule_dict = json.load(open(os.path.expanduser(args.rule), 'r'))
 
-    review_file = open(f'{args.output}', 'w')
+    with open(f'{args.output}', 'w') as review_file:
+        js_list = []
+        handles = []
+        for idx, (ques_js, ans1_js, ans2_js) in enumerate(zip(f_q, f_ans1, f_ans2)):
+            # if idx == 10:
+            #     break
 
-    js_list = []
-    handles = []
-    idx = 0
-    for ques_js, ans1_js, ans2_js in zip(f_q, f_ans1, f_ans2):
-        # if idx == 10:
-        #     break
+            ques = json.loads(ques_js)['question']
+            ans1 = json.loads(ans1_js)['answer']
+            ans2 = json.loads(ans2_js)['answer']
 
-        ques = json.loads(ques_js)['question']
-        ans1 = json.loads(ans1_js)['answer']
-        ans2 = json.loads(ans2_js)['answer']
+            category = json.loads(ques_js)['category']
+            rule = rule_dict[category] if category in rule_dict else rule_dict['default']
+            prompt = rule['prompt']
+            role = rule['role']
+            content = (f'[Question]\n{ques}\n\n'
+                       f'[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n'
+                       f'[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n'
+                       f'[System]\n{prompt}\n\n')
+            js_list.append({
+                'id': idx+1,
+                'question': ques,
+                'answer1': ans1,
+                'answer2': ans2,
+                'category': category})
+            handles.append(get_eval.remote(content, args.max_tokens))
+            # To avoid the rate limit set by OpenAI
+            time.sleep(10)
 
-        category = json.loads(ques_js)['category']
-        if category in rule_dict:
-            rule = rule_dict[category]
-        else:
-            rule = rule_dict['default']
-        prompt = rule['prompt']
-        role = rule['role']
-        content = (f'[Question]\n{ques}\n\n'
-                   f'[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n'
-                   f'[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n'
-                   f'[System]\n{prompt}\n\n')
-        js_list.append({
-            'id': idx+1,
-            'question': ques,
-            'answer1': ans1,
-            'answer2': ans2,
-            'category': category})
-        idx += 1
-        handles.append(get_eval.remote(content, args.max_tokens))
-        # To avoid the rate limit set by OpenAI
-        time.sleep(10)
-
-    reviews = ray.get(handles)
-    for idx, review in enumerate(reviews):
-        scores = parse_score(review)
-        js_list[idx]['content'] = review
-        js_list[idx]['tuple'] = scores
-        review_file.write(json.dumps(js_list[idx]) + '\n')
-    review_file.close()
+        reviews = ray.get(handles)
+        for idx, review in enumerate(reviews):
+            scores = parse_score(review)
+            js_list[idx]['content'] = review
+            js_list[idx]['tuple'] = scores
+            review_file.write(json.dumps(js_list[idx]) + '\n')
