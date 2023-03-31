@@ -64,9 +64,12 @@ if __name__ == '__main__':
             future = executor.submit(get_answer, qid, question, args.max_tokens)
             futures.append(future)
 
-        for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-            answers.append(future.result())
-
+        answers.extend(
+            future.result()
+            for future in tqdm.tqdm(
+                concurrent.futures.as_completed(futures), total=len(futures)
+            )
+        )
     answers.sort(key=lambda x: x['question_id'])
 
     with open(os.path.expanduser(args.output), 'w') as f:

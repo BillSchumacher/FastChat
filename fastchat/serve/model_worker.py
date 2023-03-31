@@ -85,7 +85,7 @@ class ModelWorker:
     def register_to_controller(self):
         logger.info("Register to controller")
 
-        url = self.controller_addr + "/register_worker"
+        url = f"{self.controller_addr}/register_worker"
         data = {
             "worker_name": self.worker_addr,
             "check_heart_beat": True,
@@ -99,7 +99,7 @@ class ModelWorker:
                     f"Semaphore: {model_semaphore}. "
                     f"global_counter: {global_counter}")
 
-        url = self.controller_addr + "/receive_heart_beat"
+        url = f"{self.controller_addr}/receive_heart_beat"
         try:
             ret = requests.post(url, json={
                 "worker_name": self.worker_addr})
@@ -139,8 +139,6 @@ class ModelWorker:
             if i == 0:
                 out = model(
                     torch.as_tensor([input_ids]).cuda(), use_cache=True)
-                logits = out.logits
-                past_key_values = out.past_key_values
             else:
                 attention_mask = torch.ones(
                     1, past_key_values[0][0].shape[-2] + 1, device="cuda")
@@ -148,9 +146,8 @@ class ModelWorker:
                             use_cache=True,
                             attention_mask=attention_mask,
                             past_key_values=past_key_values)
-                logits = out.logits
-                past_key_values = out.past_key_values
-
+            past_key_values = out.past_key_values
+            logits = out.logits
             last_token_logits = logits[0][-1]
             if temperature < 1e-4:
                 token = int(torch.argmax(last_token_logits))
@@ -183,8 +180,7 @@ class ModelWorker:
 
     def generate_stream_gate(self, params):
         try:
-            for x in self.generate_stream(params):
-                yield x
+            yield from self.generate_stream(params)
         except torch.cuda.OutOfMemoryError:
             ret = {
                 "text": server_error_msg,

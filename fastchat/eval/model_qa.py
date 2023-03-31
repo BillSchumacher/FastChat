@@ -20,36 +20,35 @@ def eval_model(model_name, questions_file, answers_file):
 
 
     ques_file = open(os.path.expanduser(questions_file), "r")
-    ans_file = open(os.path.expanduser(answers_file), "w")
-    for i, line in enumerate(tqdm(ques_file)):
-        idx = json.loads(line)["question_id"]
-        qs = json.loads(line)["text"]
-        cat = json.loads(line)["category"]
-        conv = default_conversation.copy()
-        conv.append_message(conv.roles[0], qs)
-        prompt = conv.get_prompt()
-        inputs = tokenizer([prompt])
-        output_ids = model.generate(
-            torch.as_tensor(inputs.input_ids).cuda(),
-            do_sample=True,
-            temperature=0.7,
-            max_new_tokens=1024)
-        outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
-        try:
-            index = outputs.index(conv.sep, len(prompt))
-        except ValueError:
-            outputs += conv.sep
-            index = outputs.index(conv.sep, len(prompt))
+    with open(os.path.expanduser(answers_file), "w") as ans_file:
+        for line in tqdm(ques_file):
+            idx = json.loads(line)["question_id"]
+            qs = json.loads(line)["text"]
+            cat = json.loads(line)["category"]
+            conv = default_conversation.copy()
+            conv.append_message(conv.roles[0], qs)
+            prompt = conv.get_prompt()
+            inputs = tokenizer([prompt])
+            output_ids = model.generate(
+                torch.as_tensor(inputs.input_ids).cuda(),
+                do_sample=True,
+                temperature=0.7,
+                max_new_tokens=1024)
+            outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
+            try:
+                index = outputs.index(conv.sep, len(prompt))
+            except ValueError:
+                outputs += conv.sep
+                index = outputs.index(conv.sep, len(prompt))
 
-        outputs = outputs[len(prompt) + len(conv.roles[1]) + 2:index].strip()
-        ans_id = shortuuid.uuid()
-        ans_file.write(json.dumps({"question_id": idx,
-                                   "text": outputs,
-                                   "answer_id": ans_id,
-                                   "model_id": model_name,
-                                   "metadata": {}}) + "\n")
-        ans_file.flush()
-    ans_file.close()
+            outputs = outputs[len(prompt) + len(conv.roles[1]) + 2:index].strip()
+            ans_id = shortuuid.uuid()
+            ans_file.write(json.dumps({"question_id": idx,
+                                       "text": outputs,
+                                       "answer_id": ans_id,
+                                       "model_id": model_name,
+                                       "metadata": {}}) + "\n")
+            ans_file.flush()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

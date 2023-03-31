@@ -11,14 +11,16 @@ def main():
         worker_addr = args.worker_address
     else:
         controller_addr = args.controller_address
-        ret = requests.post(controller_addr + "/refresh_all_workers")
-        ret = requests.post(controller_addr + "/list_models")
+        ret = requests.post(f"{controller_addr}/refresh_all_workers")
+        ret = requests.post(f"{controller_addr}/list_models")
         models = ret.json()["models"]
         models.sort()
         print(f"Models: {models}")
 
-        ret = requests.post(controller_addr + "/get_worker_address",
-            json={"model": args.model_name})
+        ret = requests.post(
+            f"{controller_addr}/get_worker_address",
+            json={"model": args.model_name},
+        )
         worker_addr = ret.json()["address"]
         print(f"worker_addr: {worker_addr}")
 
@@ -37,8 +39,12 @@ def main():
         "temperature": 0.7,
         "stop": conv.sep,
     }
-    response = requests.post(worker_addr + "/worker_generate_stream", headers=headers,
-            json=pload, stream=True)
+    response = requests.post(
+        f"{worker_addr}/worker_generate_stream",
+        headers=headers,
+        json=pload,
+        stream=True,
+    )
 
     print(prompt.replace(conv.sep, "\n"), end="")
     for chunk in response.iter_lines(chunk_size=8192, decode_unicode=False, delimiter=b"\0"):

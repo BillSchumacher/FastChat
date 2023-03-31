@@ -9,10 +9,7 @@ models = ['llama', 'alpaca', 'gpt35', 'bard']
 def read_jsonl(path: str, key: str=None):
     data = []
     with open(os.path.expanduser(path)) as f:
-        for line in f:
-            if not line:
-                continue
-            data.append(json.loads(line))
+        data.extend(json.loads(line) for line in f if line)
     if key is not None:
         data.sort(key=lambda x: x[key])
         data = {item[key]: item for item in data}

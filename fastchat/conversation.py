@@ -26,19 +26,13 @@ class Conversation:
         if self.sep_style == SeparatorStyle.SINGLE:
             ret = self.system + self.sep
             for role, message in self.messages:
-                if message:
-                    ret += role + ": " + message + self.sep
-                else:
-                    ret += role + ":"
+                ret += f"{role}: {message}{self.sep}" if message else f"{role}:"
             return ret
         elif self.sep_style == SeparatorStyle.TWO:
             seps = [self.sep, self.sep2]
             ret = self.system + seps[0]
             for i, (role, message) in enumerate(self.messages):
-                if message:
-                    ret += role + ": " + message + seps[i % 2]
-                else:
-                    ret += role + ":"
+                ret += f"{role}: {message}{seps[i % 2]}" if message else f"{role}:"
             return ret
         else:
             raise ValueError(f"Invalid style: {self.sep_style}")

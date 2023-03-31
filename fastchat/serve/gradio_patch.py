@@ -85,14 +85,13 @@ class Chatbot(Changeable, Selectable, IOComponent, JSONSerializable):
         show_label: bool | None = None,
         visible: bool | None = None,
     ):
-        updated_config = {
+        return {
             "label": label,
             "show_label": show_label,
             "visible": visible,
             "value": value,
             "__type__": "update",
         }
-        return updated_config
 
     def _process_chat_messages(
         self, chat_message: str | Tuple | List | Dict | None
